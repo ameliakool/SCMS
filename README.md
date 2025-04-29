@@ -1,5 +1,6 @@
 "# SCMS" 
 This code was developed in: Eclipse IDE for Java Developers - 2024-12
+Project by Amelia Kool 25774077 - Alternative Assessment Individual Project for SSP Student
 
 The project folder name is 'SmartCampus'
 All .java files are to be contained within the package 'smart' under the src.
