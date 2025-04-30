@@ -1,4 +1,5 @@
 package smart;
+package smart;
 
 import javax.swing.*;
 import java.awt.*;
@@ -130,15 +131,12 @@ public class SmartCampusSystem {
         boolean shouldResize = !currentPanel.equals("welcome");
         if (mainFrame.isResizable() != shouldResize) {
             mainFrame.setResizable(shouldResize);
-            //sets frame back to original size regardless of dimensions of the previous window
-            mainFrame.setSize(850, 800); 
             
-            //maintain window position 
             if (shouldResize) {
                 mainFrame.pack();
             } else {
-            	//lock current size
-                mainFrame.setSize(mainFrame.getSize()); 
+                mainFrame.setSize(850, 800);
+                mainFrame.setLocationRelativeTo(null);
             }
         }
     }
@@ -149,8 +147,21 @@ public class SmartCampusSystem {
         updateResizableState();
     }
     
+    private Dimension welcomeSize = new Dimension(850, 550);
+    private Dimension otherPanelSize = new Dimension(1000, 650);
+    
     private void updateResizableState() {
-        mainFrame.setResizable(!currentPanel.equals("welcome"));
+        boolean isWelcome = currentPanel.equals("welcome");
+        mainFrame.setResizable(!isWelcome);
+        
+        if (isWelcome) {
+            mainFrame.setSize(welcomeSize);
+        } else {
+            mainFrame.setSize(otherPanelSize);
+        }
+        
+        //centre after resize
+        mainFrame.setLocationRelativeTo(null);
     }
 
     
@@ -974,7 +985,7 @@ public class SmartCampusSystem {
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(dialog, "Please enter valid date/time in the correct format.", "Invalid Input", JOptionPane.WARNING_MESSAGE);
             }
-            selectedRoom.addBooking(courseField.getText(), sTime, eTime);
+            
             saveAllData();
             refreshClassroomsPanel();
             dialog.dispose();
@@ -1128,6 +1139,7 @@ public class SmartCampusSystem {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         
+        
         //title
         JLabel titleLabel = new JLabel("Resource Management", JLabel.CENTER);
         titleLabel.setFont(new Font("Arial", Font.BOLD, 20));
@@ -1210,7 +1222,15 @@ public class SmartCampusSystem {
                 Resource resource = resources.get(selectedRow);
                 if (resource.getStatus().startsWith("Checked Out")) {
                     resource.setStatus("Available");
+                    //clear the checkedOutBy field
+                    resource.setCheckedOutBy(null); 
+                    saveAllData();
                     refreshResourcesTable(resourceTable);
+                    JOptionPane.showMessageDialog(panel, 
+                            "Resource has been successfully returned.",
+                            "Return Complete",
+                            JOptionPane.INFORMATION_MESSAGE);
+          
                 } else {
                     JOptionPane.showMessageDialog(panel, "Resource is not checked out.", "Not Checked Out", JOptionPane.WARNING_MESSAGE);
                 }
@@ -1246,7 +1266,7 @@ public class SmartCampusSystem {
         );
 
         if (studentId == null || studentId.trim().isEmpty()) {
-        	//user is cancelled
+        	//user cancelled
             return; 
         }
 
@@ -1261,9 +1281,9 @@ public class SmartCampusSystem {
             return;
         }
 
-        //proceed with the checkout
+        //update both status and checkedOutBy fields
         resource.setStatus("Checked Out to " + studentId);
-        resource.checkOut(studentId);
+        resource.setCheckedOutBy(studentId);
         saveAllData();
         refreshResourcesPanel();
         
@@ -1307,7 +1327,14 @@ public class SmartCampusSystem {
                 return;
             }
             
+            if (resources.stream().anyMatch(r -> r.getId().equalsIgnoreCase(id))) {
+                JOptionPane.showMessageDialog(dialog, "Resource ID already exists!", "Duplicate ID", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            
+            
             resources.add(new Resource(id, name, type, status));
+            saveAllData();
             dialog.dispose();
             refreshResourcesPanel();
         });
@@ -1367,14 +1394,16 @@ public class SmartCampusSystem {
     
     //here I format the resource details to display to the user who is searching
     private String formatResourceDetails(Resource resource) {
+    	String checkedOutBy = resource.getCheckedOutBy() != null ? 
+                resource.getCheckedOutBy() : "None";
+    	
         return String.format(
             "Resource ID: %s\nName: %s\nType: %s\nStatus: %s\nChecked out by: %s\n\n",
             resource.getId(),
             resource.getName(),
             resource.getType(),
             resource.getStatus(),
-            resource.getCheckedOutBy()
-       
+            checkedOutBy
         );
     }
 
@@ -1398,21 +1427,29 @@ public class SmartCampusSystem {
         JComboBox<String> typeCombo = new JComboBox<>(new String[]{"Book", "Lab Equipment", "Electronics", "Other"});
         typeCombo.setSelectedItem(resource.getType());
         
-        JLabel statusLabel = new JLabel("Status:");
-        JLabel statusValue = new JLabel(resource.getStatus());
+        JLabel statusLabel = new JLabel("Status:");        
+        JComboBox<String> statusCombo = new JComboBox<>(new String[]{"Available", "Maintenance"});
+        statusCombo.setSelectedItem(resource.getStatus().startsWith("Checked Out") ? "Available" : resource.getStatus());
         
         JButton saveButton = new JButton("Save");
         saveButton.addActionListener(_ -> {
             String name = nameField.getText();
             String type = (String) typeCombo.getSelectedItem();
+            String status = (String) statusCombo.getSelectedItem();
             
             if (name.isEmpty()) {
                 JOptionPane.showMessageDialog(dialog, "Please fill in all fields.", "Incomplete Information", JOptionPane.WARNING_MESSAGE);
                 return;
             }
-            
+         
             resource.setName(name);
             resource.setType(type);
+            
+            if (!resource.getStatus().startsWith("Checked Out")) {
+                resource.setStatus(status);
+            }            
+            
+            saveAllData();
             dialog.dispose();
             refreshResourcesPanel();
         });
@@ -1427,12 +1464,13 @@ public class SmartCampusSystem {
         panel.add(typeLabel);
         panel.add(typeCombo);
         panel.add(statusLabel);
-        panel.add(statusValue);
+        panel.add(statusCombo);
         panel.add(saveButton);
         panel.add(cancelButton);
         
         dialog.add(panel);
         dialog.setVisible(true);
+        
     }
     
     private void refreshResourcesTable(JTable table) {
@@ -1493,5 +1531,4 @@ public class SmartCampusSystem {
         });
     }
 }
-
 
