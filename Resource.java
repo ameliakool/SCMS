@@ -16,6 +16,7 @@ public class Resource implements Serializable {
         this.name = name;
         this.type = type;
         this.status = status;
+        this.checkedOutBy = null;
     }
     
     public void checkOut(String studentId) {
@@ -43,4 +44,3 @@ public class Resource implements Serializable {
 		this.checkedOutBy = checkedOutBy; }
 	
 }
-
